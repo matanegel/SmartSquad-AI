@@ -35,7 +35,6 @@ gen/
 #Maven / Spring Boot
 target/
 !.mvn/wrapper/maven-wrapper.jar
-*.class
 *.marshaled
 .apt_generated
 .classpath
