@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  # Database Service
+  db:
+    image: postgres:15
+    container_name: smartsquad-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: smartsquad
+    ports:
+      - "5432:5432"
+    networks:
+      - smartsquad-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+networks:
+  smartsquad-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
