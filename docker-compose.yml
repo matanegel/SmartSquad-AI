@@ -1,16 +1,14 @@
-version: '3.8'
-
 services:
   # Database Service
   db:
     image: postgres:15
     container_name: smartsquad-db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: smartsquad
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - smartsquad-network
     volumes:
