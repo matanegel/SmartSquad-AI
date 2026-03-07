@@ -31,6 +31,7 @@ replay_pid*
 *.ipr
 out/
 gen/
+.env
 
 #Maven / Spring Boot
 target/
