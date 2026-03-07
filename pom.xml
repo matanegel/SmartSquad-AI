@@ -10,8 +10,9 @@
     </parent>
 
     <groupId>com.smartsquad</groupId>
-    <artifactId>backend</artifactId>
+    <artifactId>smartsquad-ai</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
     <name>SmartSquad-AI</name>
     <description>AI-Powered Football Team Manager</description>
 
@@ -43,6 +44,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <version>1.18.30</version>
             <optional>true</optional>
         </dependency>
 
