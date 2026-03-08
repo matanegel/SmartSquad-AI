@@ -1,6 +1,7 @@
 package com.smartsquad.backend.controllers;
 
 import com.smartsquad.backend.models.PlayerEntity;
+import com.smartsquad.backend.services.BalancingService;
 import com.smartsquad.backend.services.PlayerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,7 @@ import java.util.List;
 public class PlayerController {
 
     private final PlayerService playerService;
+    private final BalancingService balancingService;
 
     /**
      * Get all players from the database.
@@ -26,6 +28,12 @@ public class PlayerController {
     @GetMapping
     public List<PlayerEntity> getAllPlayers() {
         return playerService.getAllPlayers();
+    }
+
+
+    @PostMapping
+    public List<PlayerEntity> getSpecificPlayers(@RequestBody List<String> names) {
+        return balancingService.findAllByNameIn(names);
     }
 
     /**
@@ -45,4 +53,6 @@ public class PlayerController {
     public void deletePlayer(@RequestParam String name) {
         playerService.deletePlayer(name);
     }
+
+
 }
