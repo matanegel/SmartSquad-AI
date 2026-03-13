@@ -31,7 +31,7 @@ public class PlayerController {
     }
 
 
-    @PostMapping
+    @PostMapping("/specific")
     public List<PlayerEntity> getSpecificPlayers(@RequestBody List<String> names) {
         return balancingService.findAllByNameIn(names);
     }
