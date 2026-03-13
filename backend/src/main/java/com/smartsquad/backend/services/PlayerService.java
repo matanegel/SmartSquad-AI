@@ -20,8 +20,8 @@ public class PlayerService {
         return playerRepository.findAll();
     }
 
-    public PlayerEntity savePlayer(PlayerEntity player) {
-        return playerRepository.save(player);
+    public void savePlayer(PlayerEntity player) {
+         playerRepository.save(player);
     }
 
     public void deletePlayer(String name) {
