@@ -12,8 +12,9 @@ import java.util.List;
 public interface PlayerRepository extends JpaRepository<PlayerEntity, Long> {
 
     @Transactional
-    public void deleteByName(String name);
+    void deleteByName(String name);
 
+    PlayerEntity findByName(String name);
 
     List<PlayerEntity> findAllByNameIn(List<String> names);
 

@@ -25,6 +25,9 @@ public class PlayerService {
     }
 
     public void deletePlayer(String name) {
+        if (playerRepository.findByName(name) == null) {
+            throw new IllegalArgumentException("Player " + name + " not found");
+        }
         playerRepository.deleteByName(name);
     }
 }

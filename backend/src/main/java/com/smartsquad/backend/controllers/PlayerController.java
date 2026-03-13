@@ -41,8 +41,9 @@ public class PlayerController {
      * Access via: POST http://localhost:8080/api/players
      */
     @PostMapping
-    public PlayerEntity createPlayer(@RequestBody PlayerEntity player) {
-        return playerService.savePlayer(player);
+    public String createPlayer(@RequestBody PlayerEntity player) {
+         playerService.savePlayer(player);
+         return player.getName() + " was added successfully";
     }
 
     /**
@@ -50,8 +51,13 @@ public class PlayerController {
      * Access via: DELETE http://localhost:8080/api/players?name=messi
      */
     @DeleteMapping
-    public void deletePlayer(@RequestParam String name) {
+    public String deletePlayer(@RequestParam String name) {
+        if (name == null || name.isEmpty()) {
+           throw new IllegalArgumentException("Name cannot be null or empty");
+        }
+
         playerService.deletePlayer(name);
+        return name + " was deleted successfully";
     }
 
 
