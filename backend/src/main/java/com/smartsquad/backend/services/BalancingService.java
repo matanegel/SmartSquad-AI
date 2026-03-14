@@ -57,16 +57,83 @@ public class BalancingService {
             teams.add(new Team());
         }
 
-        // 3. Greedy distribution
-        for (PlayerEntity player : sortedPlayers) {
-            // Find the team with the minimum total skill score
-            Team weakestTeam = teams.stream()
-                    .min(Comparator.comparingInt(Team::getTotalSkill))
-                    .orElse(teams.getFirst());
+        // map: Player Name -> Forced Team Index
+        Map<String, Integer> forcedTeamMap = new HashMap<>();
 
-            weakestTeam.addPlayer(player);
+        // 3. Main Loop
+        for (PlayerEntity player : sortedPlayers) {
+            String pName = player.getName().toLowerCase();
+
+            // Determine target team index
+            int targetTeamIndex;
+            if (forcedTeamMap.containsKey(pName)) {
+                targetTeamIndex = forcedTeamMap.get(pName);
+            } else {
+                // Regular Greedy: Pick the weakest team
+                targetTeamIndex = findWeakestTeamIndex(teams);
+            }
+
+            // Assign the player
+            Team targetTeam = teams.get(targetTeamIndex);
+            targetTeam.addPlayer(player);
+
+            // 4. Update "Flags" for constraints
+            updateConstraintFlags(player, targetTeamIndex, numberOfTeams, teams, forcedTeamMap);
         }
 
         return teams;
+    }
+
+    /**
+     * Updates the map with forced assignments based on the current player's constraints.
+     */
+    private void updateConstraintFlags(PlayerEntity player, int currentTeamIdx, int totalTeams, List<Team> teams, Map<String, Integer> forcedMap) {
+        String mustWith = player.getHasToBeWith();
+        String cannotWith = player.getCannotBeWith();
+
+        // If player has a MUST partner -> they are forced to the same team
+        if (mustWith != null) {
+            forcedMap.put(mustWith.toLowerCase(), currentTeamIdx);
+        }
+
+        // If player has a CANNOT rival -> they are forced to a DIFFERENT team
+        if (cannotWith != null) {
+            String rivalName = cannotWith.toLowerCase();
+            // If the rival wasn't already forced elsewhere, find the next best team for them
+            if (!forcedMap.containsKey(rivalName)) {
+                int rivalTeamIdx = findAlternativeTeamIndex(currentTeamIdx, totalTeams, teams);
+                forcedMap.put(rivalName, rivalTeamIdx);
+            }
+        }
+    }
+
+    private int findWeakestTeamIndex(List<Team> teams) {
+        int minSkill = Integer.MAX_VALUE;
+        int index = 0;
+        for (int i = 0; i < teams.size(); i++) {
+            if (teams.get(i).getTotalSkill() < minSkill) {
+                minSkill = teams.get(i).getTotalSkill();
+                index = i;
+            }
+        }
+        return index;
+    }
+
+    /**
+     * Finds the best team for a rival (someone who cannot be in currentTeamIdx).
+     * Usually picks the current weakest team that is NOT the forbidden one.
+     */
+    private int findAlternativeTeamIndex(int forbiddenIdx, int totalTeams, List<Team> teams) {
+        int minSkill = Integer.MAX_VALUE;
+        int index = (forbiddenIdx + 1) % totalTeams; // Default fallback
+
+        for (int i = 0; i < totalTeams; i++) {
+            if (i == forbiddenIdx) continue;
+            if (teams.get(i).getTotalSkill() < minSkill) {
+                minSkill = teams.get(i).getTotalSkill();
+                index = i;
+            }
+        }
+        return index;
     }
 }
