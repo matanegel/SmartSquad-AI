@@ -1,5 +1,6 @@
 package com.smartsquad.backend.controllers;
 
+import com.smartsquad.backend.DTO.PlayerResponse;
 import com.smartsquad.backend.models.PlayerEntity;
 import com.smartsquad.backend.services.BalancingService;
 import com.smartsquad.backend.services.PlayerService;
@@ -41,9 +42,8 @@ public class PlayerController {
      * Access via: POST http://localhost:8080/api/players
      */
     @PostMapping
-    public String createPlayer(@RequestBody PlayerEntity player) {
-         playerService.savePlayer(player);
-         return player.getName() + " was added successfully";
+    public PlayerResponse createPlayer(@RequestBody PlayerEntity player) {
+         return playerService.savePlayer(player);
     }
 
     /**
@@ -60,5 +60,10 @@ public class PlayerController {
         return name + " was deleted successfully";
     }
 
+    @DeleteMapping("/reset")
+    public String resetPlayers (){
+        playerService.deleteAllPlayers();
+        return "All players were deleted successfully";
+    }
 
 }

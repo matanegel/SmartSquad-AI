@@ -1,5 +1,6 @@
 package com.smartsquad.backend.services;
 
+import com.smartsquad.backend.DTO.PlayerResponse;
 import com.smartsquad.backend.models.PlayerEntity;
 import com.smartsquad.backend.repositories.PlayerRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +21,16 @@ public class PlayerService {
         return playerRepository.findAll();
     }
 
-    public void savePlayer(PlayerEntity player) {
-         playerRepository.save(player);
+    public PlayerResponse savePlayer(PlayerEntity player) {
+        if (playerRepository.findByName(player.getName()) != null) {
+            throw new IllegalArgumentException("Player " + player.getName() + " already exists");
+        }
+        PlayerEntity savedPlayer =  playerRepository.save(player);
+        return new PlayerResponse(
+                savedPlayer.getName() + " was created successfully",
+                savedPlayer
+        );
+
     }
 
     public void deletePlayer(String name) {
@@ -29,5 +38,9 @@ public class PlayerService {
             throw new IllegalArgumentException("Player " + name + " not found");
         }
         playerRepository.deleteByName(name);
+    }
+
+    public void deleteAllPlayers() {
+        playerRepository.deleteAll();
     }
 }
