@@ -22,6 +22,12 @@ public class PlayerService {
         return playerRepository.findAll();
     }
 
+    public List<PlayerEntity> getPlayersByNames(List<String> names) {
+        return playerRepository.findAllByNameIn(names);
+    }
+
+
+
     public PlayerResponse savePlayer(PlayerEntity player) {
         player.setName(player.getName().toLowerCase());
         player.setCannotBeWith(player.getCannotBeWith() != null ? player.getCannotBeWith().toLowerCase() : null );

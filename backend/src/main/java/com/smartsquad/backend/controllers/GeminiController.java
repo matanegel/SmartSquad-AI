@@ -1,8 +1,10 @@
 package com.smartsquad.backend.controllers;
 
+import com.smartsquad.backend.DTO.PlayerResponse;
 import com.smartsquad.backend.models.PlayerEntity;
 import com.smartsquad.backend.services.BalancingService;
 import com.smartsquad.backend.services.GeminiService;
+import com.smartsquad.backend.services.PlayerService;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +26,7 @@ public class GeminiController {
 
     private final GeminiService geminiService;
     private final BalancingService balancingService;
+    private final PlayerService playerService;
 
     /**
      * The Smart Balance Endpoint:
@@ -45,5 +48,10 @@ public class GeminiController {
         List<PlayerEntity> players = geminiService.getPlayersFromPrompt(userPrompt);
 
         return balancingService.balanceTeams(players, teams);
+    }
+
+    @PostMapping("/create")
+    public PlayerResponse createPlayer(@RequestBody String userPrompt){
+       return  playerService.savePlayer(geminiService.parsePlayerFromText(userPrompt));
     }
 }

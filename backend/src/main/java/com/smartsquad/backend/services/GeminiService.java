@@ -1,7 +1,7 @@
 package com.smartsquad.backend.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartsquad.backend.models.PlayerEntity;
-import com.smartsquad.backend.repositories.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -16,8 +16,10 @@ import java.util.*;
 @RequiredArgsConstructor
 public class GeminiService {
 
-    private final PlayerRepository playerRepository;
+    private final PlayerService playerService;
     private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
 
     @Value("${GEMINI_API_KEY}")
     private String apiKey;
@@ -33,14 +35,14 @@ public class GeminiService {
 
         // Handle "all players" shortcut
         if (lowerPrompt.contains("all") || lowerPrompt.contains("everyone") || lowerPrompt.contains("כולם")) {
-            return playerRepository.findAll();
+            return playerService.getAllPlayers();
         }
 
         // Use AI to extract names
         List<String> names = extractPlayerNames(userPrompt);
         if (names.isEmpty())  throw new IllegalArgumentException("AI could not identify any participating players in your request.");
 
-        return playerRepository.findAllByNameIn(names);
+        return playerService.getPlayersByNames(names);
     }
 
 
@@ -59,10 +61,17 @@ public class GeminiService {
                 "Example: Messi, Ronaldo. If no names are found, return an empty string.\n\n" +
                 "Input Text: " + userInput;
 
-        return callGeminiWithRetry(combinedPrompt);
+        String resultText = callGeminiWithRetry(combinedPrompt);
+
+        if (resultText == null || resultText.isEmpty()) return List.of();
+
+        return Arrays.stream(resultText.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
     }
 
-    private List<String> callGeminiWithRetry(String fullPrompt) {
+    private String callGeminiWithRetry(String fullPrompt) {
         int maxRetries = 5;
         long delay = 1000; // Starting with 1s
 
@@ -79,10 +88,10 @@ public class GeminiService {
                 }
             }
         }
-        return List.of();
+        return "";
     }
 
-    private List<String> performApiCall(String fullPrompt) {
+    private String performApiCall(String fullPrompt) {
         String url = BASE_URL + MODEL_NAME + ":generateContent?key=" + apiKey;
 
         // Structured payload for Gemini API
@@ -105,16 +114,45 @@ public class GeminiService {
             List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
             Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
             List<Map<String, String>> parts = (List<Map<String, String>>) content.get("parts");
-            String resultText = parts.get(0).get("text").trim();
-
-            if (resultText.isEmpty()) return List.of();
-
-            return Arrays.stream(resultText.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .toList();
+            return parts.get(0).get("text").trim();
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse AI response");
         }
     }
+
+    /**
+     * Extracts player data from natural language and converts it into a PlayerEntity.
+     * * @param userPrompt The free-text input (e.g., "Create Kaka with skill 5...")
+     * @return A PlayerEntity object populated with extracted data.
+     */
+    public PlayerEntity parsePlayerFromText(String userPrompt) {
+        String systemInstruction = """
+                You are a data extraction assistant for a football management system.
+                Your goal is to extract player details from user text and return them in STRICT JSON format.
+                
+                Fields to extract:
+                - name: The player's name (string).
+                - skillLevel: The primary skill level (integer, 1-5). Default to 3 if not mentioned.
+                - secondarySkill: The secondary level or tie-breaker (integer). Default to 0.
+                - hasToBeWith: Name of a friend/partner (string or null).
+                - cannotBeWith: Name of a rival/enemy (string or null).
+                
+                Rules:
+                - Return ONLY the JSON object. No preamble, no markdown formatting (like ```json), no explanations.
+                - If a field is missing, use defaults or null.
+                """;
+
+        String fullPrompt = "System Instruction: " + systemInstruction + "\n\nUser Input: " + userPrompt;
+
+        String aiResponse = callGeminiWithRetry(fullPrompt);
+
+        try {
+            // Clean AI response in case it wraps it in markdown blocks
+            String jsonString = aiResponse.replace("```json", "").replace("```", "").trim();
+            return objectMapper.readValue(jsonString, PlayerEntity.class);
+        } catch (Exception e) {
+            throw new RuntimeException("AI returned invalid player data: " + aiResponse);
+        }
+    }
+
 }
