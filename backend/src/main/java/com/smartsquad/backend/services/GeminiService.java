@@ -1,5 +1,7 @@
 package com.smartsquad.backend.services;
 
+import com.smartsquad.backend.models.PlayerEntity;
+import com.smartsquad.backend.repositories.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -14,13 +16,33 @@ import java.util.*;
 @RequiredArgsConstructor
 public class GeminiService {
 
+    private final PlayerRepository playerRepository;
     private final RestTemplate restTemplate;
 
-    @Value("${GEMINI_API_KEY:}")
+    @Value("${GEMINI_API_KEY}")
     private String apiKey;
 
-    private static final String MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
-    private static final String BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL_NAME + ":generateContent?key=";
+    private static final String MODEL_NAME = "gemini-2.5-flash-lite";
+    private static final String BASE_URL = "https://generativelanguage.googleapis.com/v1/models/";
+
+
+
+
+    public List<PlayerEntity> getPlayersFromPrompt(String userPrompt) {
+        String lowerPrompt = userPrompt.toLowerCase();
+
+        // Handle "all players" shortcut
+        if (lowerPrompt.contains("all") || lowerPrompt.contains("everyone") || lowerPrompt.contains("כולם")) {
+            return playerRepository.findAll();
+        }
+
+        // Use AI to extract names
+        List<String> names = extractPlayerNames(userPrompt);
+        if (names.isEmpty())  throw new IllegalArgumentException("AI could not identify any participating players in your request.");
+
+        return playerRepository.findAllByNameIn(names);
+    }
+
 
     /**
      * Calls Gemini AI to extract player names from a free-text prompt.
@@ -31,24 +53,24 @@ public class GeminiService {
      * @return A list of cleaned player names found in the text.
      */
     public List<String> extractPlayerNames(String userInput) {
-        String systemPrompt = "You are an expert football match coordinator. " +
-                "Analyze the provided text and extract ONLY the names of players who ARE attending or participating in the match. " +
-                "If the text mentions a player is NOT coming, is injured, or absent, do NOT include them in the list. " +
-                "Return the results as a comma-separated list of names. If no attending players are found, return an empty string. " +
-                "Example: 'Messi and Neymar are here but Ronaldo isn't' -> Output: Messi, Neymar";
+        // We put the instructions directly in the prompt to avoid JSON field compatibility issues (systemInstruction)
+        String combinedPrompt = "Act as a football coordinator. Extract the names of players who are attending " +
+                "from the text below. Return ONLY a comma-separated list of names. " +
+                "Example: Messi, Ronaldo. If no names are found, return an empty string.\n\n" +
+                "Input Text: " + userInput;
 
-        return callGeminiWithRetry(userInput, systemPrompt);
+        return callGeminiWithRetry(combinedPrompt);
     }
 
-    private List<String> callGeminiWithRetry(String userQuery, String systemPrompt) {
+    private List<String> callGeminiWithRetry(String fullPrompt) {
         int maxRetries = 5;
         long delay = 1000; // Starting with 1s
 
         for (int i = 0; i < maxRetries; i++) {
             try {
-                return performApiCall(userQuery, systemPrompt);
+                return performApiCall(fullPrompt);
             } catch (Exception e) {
-                if (i == maxRetries - 1) throw new RuntimeException("AI Service is currently unavailable. Please try again later.");
+                if (i == maxRetries - 1) throw new RuntimeException("Gemini API error " + e.getMessage());
                 try {
                     Thread.sleep(delay);
                     delay *= 2; // Exponential backoff: 1s, 2s, 4s, 8s, 16s
@@ -60,16 +82,19 @@ public class GeminiService {
         return List.of();
     }
 
-    private List<String> performApiCall(String userQuery, String systemPrompt) {
-        String url = BASE_URL + apiKey;
+    private List<String> performApiCall(String fullPrompt) {
+        String url = BASE_URL + MODEL_NAME + ":generateContent?key=" + apiKey;
 
         // Structured payload for Gemini API
         Map<String, Object> payload = Map.of(
                 "contents", List.of(
-                        Map.of("parts", List.of(Map.of("text", userQuery)))
+                        Map.of("parts", List.of(
+                                Map.of("text", fullPrompt)
+                        ))
                 ),
-                "systemInstruction", Map.of(
-                        "parts", List.of(Map.of("text", systemPrompt))
+                "generationConfig", Map.of(
+                        "temperature", 0.1,
+                        "maxOutputTokens", 50
                 )
         );
 

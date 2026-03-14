@@ -42,17 +42,7 @@ public class GeminiController {
             @RequestParam(defaultValue = "2") int teams) {
 
 
-        List<String> attendingNames = geminiService.extractPlayerNames(userPrompt);
-
-        if (attendingNames.isEmpty()) {
-            throw new IllegalArgumentException("AI could not identify any participating players in your request.");
-        }
-
-        List<PlayerEntity> players = balancingService.findAllByNameIn(attendingNames);
-
-        if (players.isEmpty()) {
-            throw new IllegalArgumentException("Players found by AI (" + attendingNames + ") do not exist in the database.");
-        }
+        List<PlayerEntity> players = geminiService.getPlayersFromPrompt(userPrompt);
 
         return balancingService.balanceTeams(players, teams);
     }
