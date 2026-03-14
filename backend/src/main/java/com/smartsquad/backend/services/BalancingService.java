@@ -59,50 +59,52 @@ public class BalancingService {
 
         // map: Player Name -> Forced Team Index
         Map<String, Integer> forcedTeamMap = new HashMap<>();
+        Set<String> assignedNames = new HashSet<>();
 
         // 3. Main Loop
         for (PlayerEntity player : sortedPlayers) {
             String pName = player.getName().toLowerCase();
+            if (assignedNames.contains(pName)) continue;
 
-            // Determine target team index
-            int targetTeamIndex;
-            if (forcedTeamMap.containsKey(pName)) {
-                targetTeamIndex = forcedTeamMap.get(pName);
-            } else {
-                // Regular Greedy: Pick the weakest team
-                targetTeamIndex = findWeakestTeamIndex(teams);
-            }
+            int targetIdx = forcedTeamMap.getOrDefault(pName, findWeakestTeamIndex(teams));
 
-            // Assign the player
-            Team targetTeam = teams.get(targetTeamIndex);
-            targetTeam.addPlayer(player);
-
-            // 4. Update "Flags" for constraints
-            updateConstraintFlags(player, targetTeamIndex, numberOfTeams, teams, forcedTeamMap);
+            // Recursive assign player and all their "Must-With" chain
+            assignPlayerRecursive(player, targetIdx, teams, assignedNames, forcedTeamMap, players, numberOfTeams);
         }
-
         return teams;
     }
 
     /**
-     * Updates the map with forced assignments based on the current player's constraints.
+     * Recursively assigns a player and all linked "must-be-with" partners to the same team.
      */
-    private void updateConstraintFlags(PlayerEntity player, int currentTeamIdx, int totalTeams, List<Team> teams, Map<String, Integer> forcedMap) {
-        String mustWith = player.getHasToBeWith();
-        String cannotWith = player.getCannotBeWith();
+    private void assignPlayerRecursive(PlayerEntity player, int teamIdx, List<Team> teams,
+                                       Set<String> assignedNames, Map<String, Integer> forcedMap,
+                                       List<PlayerEntity> allPlayers, int totalTeams) {
 
-        // If player has a MUST partner -> they are forced to the same team
-        if (mustWith != null) {
-            forcedMap.put(mustWith.toLowerCase(), currentTeamIdx);
+        String pName = player.getName().toLowerCase();
+        if (assignedNames.contains(pName)) return;
+
+        // 1. Assign current player
+        teams.get(teamIdx).addPlayer(player);
+        assignedNames.add(pName);
+
+        // 2. Handle Rival (Cannot-Be-With) - Flag them for a different team later
+        String rivalName = player.getCannotBeWith();
+        if (rivalName != null && !forcedMap.containsKey(rivalName.toLowerCase())) {
+            int rivalTeamIdx = findAlternativeTeamIndex(teamIdx, totalTeams, teams);
+            forcedMap.put(rivalName.toLowerCase(), rivalTeamIdx);
         }
 
-        // If player has a CANNOT rival -> they are forced to a DIFFERENT team
-        if (cannotWith != null) {
-            String rivalName = cannotWith.toLowerCase();
-            // If the rival wasn't already forced elsewhere, find the next best team for them
-            if (!forcedMap.containsKey(rivalName)) {
-                int rivalTeamIdx = findAlternativeTeamIndex(currentTeamIdx, totalTeams, teams);
-                forcedMap.put(rivalName, rivalTeamIdx);
+        // 3. Handle Partner (Has-To-Be-With) - RECURSIVE CHAIN
+        String partnerName = player.getHasToBeWith();
+        if (partnerName != null) {
+            Optional<PlayerEntity> partnerOpt = allPlayers.stream()
+                    .filter(p -> p.getName().equalsIgnoreCase(partnerName))
+                    .findFirst();
+
+            // If the partner is in this match, pull them into the same team immediately
+            if (partnerOpt.isPresent()) {
+                assignPlayerRecursive(partnerOpt.get(), teamIdx, teams, assignedNames, forcedMap, allPlayers, totalTeams);
             }
         }
     }

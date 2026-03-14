@@ -22,6 +22,10 @@ public class PlayerService {
         return playerRepository.findAll();
     }
 
+    public PlayerEntity getPlayerByName(String name) {
+        return playerRepository.findByName(name);
+    }
+
     public List<PlayerEntity> getPlayersByNames(List<String> names) {
         return playerRepository.findAllByNameIn(names);
     }
@@ -35,6 +39,9 @@ public class PlayerService {
 
         if (Optional.ofNullable(playerRepository.findByName(player.getName())).isPresent()){
             throw new IllegalArgumentException("Player " + player.getName() + " already exists");
+        }
+        if (player.getSkillLevel() < 0 || player.getSkillLevel() > 5) {
+            throw new IllegalArgumentException("Skill level must be between 0 and 5");
         }
 
         validateConstraints(player);
@@ -123,4 +130,13 @@ public class PlayerService {
         }
     }
 
+    public void updateSkillLevel(PlayerEntity player, int newSkillLevel) {
+        if (newSkillLevel < 0 || newSkillLevel > 5) {
+            throw new IllegalArgumentException("Skill level must be between 0 and 5");
+        }
+        int rowsChanged = playerRepository.updateSkillLevelByName(player.getName(), newSkillLevel);
+        if (rowsChanged == 0) {
+            throw new IllegalArgumentException("Player " + player.getName() + " not found");
+        }
+    }
 }
