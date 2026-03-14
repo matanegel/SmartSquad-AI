@@ -23,6 +23,10 @@ public class PlayerService {
     }
 
     public PlayerResponse savePlayer(PlayerEntity player) {
+        player.setName(player.getName().toLowerCase());
+        player.setCannotBeWith(player.getCannotBeWith() != null ? player.getCannotBeWith().toLowerCase() : null );
+        player.setHasToBeWith(player.getHasToBeWith() != null ? player.getHasToBeWith().toLowerCase() : null );
+
         if (Optional.ofNullable(playerRepository.findByName(player.getName())).isPresent()){
             throw new IllegalArgumentException("Player " + player.getName() + " already exists");
         }
@@ -38,6 +42,7 @@ public class PlayerService {
     }
 
     public void deletePlayer(String name) {
+        name = name.toLowerCase();
         if (playerRepository.findByName(name) == null) {
             throw new IllegalArgumentException("Player " + name + " not found");
         }
