@@ -66,4 +66,17 @@ public class PlayerController {
         return "All players were deleted successfully";
     }
 
+    @PostMapping("/updateSkill")
+    public String updatePlayerSkill(@RequestParam String name, @RequestParam int skillLevel) {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Name cannot be null or empty");
+        }
+        PlayerEntity targetPlayer = playerService.getPlayerByName(name);
+        if (targetPlayer == null) {
+            throw new IllegalArgumentException("Player not found");
+        }
+        targetPlayer.setSkillLevel(skillLevel);
+        playerService.updateSkillLevel(targetPlayer, skillLevel);
+        return "Skill level of " + name + " was updated successfully to " + skillLevel + ".";
+    }
 }
