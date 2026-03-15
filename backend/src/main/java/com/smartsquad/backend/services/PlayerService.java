@@ -5,6 +5,7 @@ import com.smartsquad.backend.models.PlayerEntity;
 import com.smartsquad.backend.repositories.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,9 +31,111 @@ public class PlayerService {
         return playerRepository.findAllByNameIn(names);
     }
 
-
-
+    /**
+     * Saves a player and synchronizes constraints with existing players in the DB.
+     * Ensures that relationships are always bidirectional.
+     */
+    @Transactional
     public PlayerResponse savePlayer(PlayerEntity player) {
+        String cleanName = player.getName().toLowerCase();
+        player.setName(cleanName);
+
+        //Check if player already exists
+        if (playerRepository.findByName(cleanName) != null) {
+            throw new IllegalArgumentException("Player " + cleanName + " already exists.");
+        }
+
+        //Normalize constraint inputs
+        player.setHasToBeWith(player.getHasToBeWith() != null ? player.getHasToBeWith().toLowerCase() : null);
+        player.setCannotBeWith(player.getCannotBeWith() != null ? player.getCannotBeWith().toLowerCase() : null);
+
+        //Sync existing "claims" from the database to this new player
+        // This prevents overwriting a pre-existing relationship established by another player.
+        syncIncomingConstraints(player);
+
+        //Final logical validation (Self-checks)
+        validateConstraints(player);
+
+        //Save the primary entity
+        PlayerEntity saved = playerRepository.save(player);
+
+        //Apply Reciprocity: Update the partner/rival to point back to this player
+        // If this fails (e.g., target is already taken), the transaction rolls back.
+        applyReciprocity(saved);
+
+        return new PlayerResponse(
+                saved.getName() + " was created successfully",
+                saved);
+    }
+
+    /**
+     * Checks if other players in the DB already point to this player.
+     * If they do, this player must point back to them.
+     */
+    private void syncIncomingConstraints(PlayerEntity player) {
+        String name = player.getName();
+
+        // PARTNER CHECK: Does anyone else say "I must be with Messi"?
+        List<PlayerEntity> existingFans = playerRepository.findByHasToBeWith(name);
+        if (!existingFans.isEmpty()) {
+            String existingPartner = existingFans.get(0).getName();
+
+            // If the user provided a different partner, we have a conflict.
+            if (player.getHasToBeWith() != null && !player.getHasToBeWith().equalsIgnoreCase(existingPartner)) {
+                throw new IllegalArgumentException("Conflict: " + name + " is already 'claimed' by " + existingPartner +
+                        " as a partner. You cannot link them to " + player.getHasToBeWith() + ".");
+            }
+            // Auto-sync the relationship
+            player.setHasToBeWith(existingPartner);
+        }
+
+        // RIVAL CHECK: Does anyone else say "I cannot be with Messi"?
+        List<PlayerEntity> existingEnemies = playerRepository.findByCannotBeWith(name);
+        if (!existingEnemies.isEmpty()) {
+            String existingRival = existingEnemies.get(0).getName();
+
+            if (player.getCannotBeWith() != null && !player.getCannotBeWith().equalsIgnoreCase(existingRival)) {
+                throw new IllegalArgumentException("Conflict: " + name + " is already 'claimed' by " + existingRival +
+                        " as a rival. You cannot link them to " + player.getCannotBeWith() + ".");
+            }
+            player.setCannotBeWith(existingRival);
+        }
+    }
+
+    /**
+     * Ensures bidirectional links. If Messi -> Neymar, then Neymar -> Messi.
+     * Throws an error if the target is already linked to someone else.
+     */
+    private void applyReciprocity(PlayerEntity player) {
+        // Handle Partner Reciprocity
+        if (player.getHasToBeWith() != null) {
+            String partnerName = player.getHasToBeWith();
+            PlayerEntity partner = playerRepository.findByName(partnerName);
+
+            if (partner != null) {
+                // If partner already points to someone else, we have a broken link
+                if (partner.getHasToBeWith() != null && !partner.getHasToBeWith().equalsIgnoreCase(player.getName())) {
+                    throw new IllegalArgumentException("Conflict: " + partnerName + " is already linked to " + partner.getHasToBeWith() + ".");
+                }
+                playerRepository.updateHasToBeWithByName(partnerName, player.getName());
+            }
+        }
+
+        // Handle Rival Reciprocity
+        if (player.getCannotBeWith() != null) {
+            String rivalName = player.getCannotBeWith();
+            PlayerEntity rival = playerRepository.findByName(rivalName);
+
+            if (rival != null) {
+                if (rival.getCannotBeWith() != null && !rival.getCannotBeWith().equalsIgnoreCase(player.getName())) {
+                    throw new IllegalArgumentException("Conflict: " + rivalName + " is already forced away from " + rival.getCannotBeWith() + ".");
+                }
+                playerRepository.updateCannotBeWithByName(rivalName, player.getName());
+            }
+        }
+    }
+
+   /* public PlayerResponse savePlayer(PlayerEntity player) {
         player.setName(player.getName().toLowerCase());
         player.setCannotBeWith(player.getCannotBeWith() != null ? player.getCannotBeWith().toLowerCase() : null );
         player.setHasToBeWith(player.getHasToBeWith() != null ? player.getHasToBeWith().toLowerCase() : null );
@@ -52,7 +155,7 @@ public class PlayerService {
                 savedPlayer
         );
 
-    }
+    }*/
 
     public void deletePlayer(String name) {
         name = name.toLowerCase();
