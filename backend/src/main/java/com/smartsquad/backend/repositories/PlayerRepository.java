@@ -53,7 +53,7 @@ public interface PlayerRepository extends JpaRepository<PlayerEntity, Long> {
     @Modifying
     @Transactional
     @Query("UPDATE PlayerEntity p SET p.hasToBeWith = :hasToBeWith WHERE p.name = :name")
-    int updateHasToBeWithByName(@Param("name") String name, @Param("hasToBeWith") String hasToBeWith);
+    void updateHasToBeWithByName(@Param("name") String name, @Param("hasToBeWith") String hasToBeWith);
 
     /**
      * Updates the 'cannot_be_with' constraint for a player.
@@ -61,7 +61,7 @@ public interface PlayerRepository extends JpaRepository<PlayerEntity, Long> {
     @Modifying
     @Transactional
     @Query("UPDATE PlayerEntity p SET p.cannotBeWith = :cannotBeWith WHERE p.name = :name")
-    int updateCannotBeWithByName(@Param("name") String name, @Param("cannotBeWith") String cannotBeWith);
+    void updateCannotBeWithByName(@Param("name") String name, @Param("cannotBeWith") String cannotBeWith);
 
 }
 

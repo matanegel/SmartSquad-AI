@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Player Service
@@ -77,6 +78,12 @@ public class PlayerService {
 
         // PARTNER CHECK: Does anyone else say "I must be with Messi"?
         List<PlayerEntity> existingFans = playerRepository.findByHasToBeWith(name);
+
+        if (existingFans.size() > 1) {
+            String claimants = existingFans.stream().map(PlayerEntity::getName).collect(Collectors.joining(", "));
+            throw new IllegalArgumentException("Conflict: Multiple players (" + claimants + ") are already forced to be with " + name + ". Only one partner is allowed.");
+        }
+
         if (!existingFans.isEmpty()) {
             String existingPartner = existingFans.get(0).getName();
 
@@ -135,27 +142,6 @@ public class PlayerService {
         }
     }
 
-   /* public PlayerResponse savePlayer(PlayerEntity player) {
-        player.setName(player.getName().toLowerCase());
-        player.setCannotBeWith(player.getCannotBeWith() != null ? player.getCannotBeWith().toLowerCase() : null );
-        player.setHasToBeWith(player.getHasToBeWith() != null ? player.getHasToBeWith().toLowerCase() : null );
-
-        if (Optional.ofNullable(playerRepository.findByName(player.getName())).isPresent()){
-            throw new IllegalArgumentException("Player " + player.getName() + " already exists");
-        }
-        if (player.getSkillLevel() < 0 || player.getSkillLevel() > 5) {
-            throw new IllegalArgumentException("Skill level must be between 0 and 5");
-        }
-
-        validateConstraints(player);
-
-        PlayerEntity savedPlayer =  playerRepository.save(player);
-        return new PlayerResponse(
-                savedPlayer.getName() + " was created successfully",
-                savedPlayer
-        );
-
-    }*/
 
     public void deletePlayer(String name) {
         name = name.toLowerCase();
@@ -240,6 +226,68 @@ public class PlayerService {
         int rowsChanged = playerRepository.updateSkillLevelByName(player.getName(), newSkillLevel);
         if (rowsChanged == 0) {
             throw new IllegalArgumentException("Player " + player.getName() + " not found");
+        }
+    }
+
+    /**
+     * Updates the partner constraint for an existing player.
+     * Use this to resolve conflicts before adding new players.
+     */
+    @Transactional
+    public void updateHasToBeWith(String name, String partnerName) {
+        name = name.toLowerCase();
+        partnerName = (partnerName != null) ? partnerName.toLowerCase() : null;
+
+        String finalName = name;
+        PlayerEntity player = Optional.ofNullable(playerRepository.findByName(name))
+                .orElseThrow(() -> new IllegalArgumentException("Player " + finalName + " not found"));
+
+        // 1. Break old reciprocity link if it exists
+        String oldPartner = player.getHasToBeWith();
+        if (oldPartner != null && !oldPartner.equalsIgnoreCase(partnerName)) {
+            playerRepository.updateHasToBeWithByName(oldPartner, null);
+        }
+
+        // 2. Set the new intent
+        player.setHasToBeWith(partnerName);
+
+        // 3. Logic check for self-contradiction or transitive loops
+        validateConstraints(player);
+
+        // 4. Persist
+        playerRepository.save(player);
+
+        // 5. Establish new reciprocity
+        if (partnerName != null) {
+            playerRepository.updateHasToBeWithByName(partnerName, name);
+        }
+    }
+
+    /**
+     * Updates the rival constraint for an existing player.
+     */
+    @Transactional
+    public void updateCannotBeWith(String name, String rivalName) {
+        name = name.toLowerCase();
+        rivalName = (rivalName != null) ? rivalName.toLowerCase() : null;
+
+        String finalName = name;
+        PlayerEntity player = Optional.ofNullable(playerRepository.findByName(name))
+                .orElseThrow(() -> new IllegalArgumentException("Player " + finalName + " not found"));
+
+        // 1. Break old reciprocity link
+        String oldRival = player.getCannotBeWith();
+        if (oldRival != null && !oldRival.equalsIgnoreCase(rivalName)) {
+            playerRepository.updateCannotBeWithByName(oldRival, null);
+        }
+
+        player.setCannotBeWith(rivalName);
+        validateConstraints(player);
+        playerRepository.save(player);
+
+        // 2. Establish new reciprocity
+        if (rivalName != null) {
+            playerRepository.updateCannotBeWithByName(rivalName, name);
         }
     }
 }
