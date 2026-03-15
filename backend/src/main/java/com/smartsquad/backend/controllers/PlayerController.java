@@ -43,7 +43,7 @@ public class PlayerController {
      */
     @PostMapping
     public PlayerResponse createPlayer(@RequestBody PlayerEntity player) {
-         return playerService.savePlayer(player);
+        return playerService.savePlayer(player);
     }
 
     /**
@@ -53,7 +53,7 @@ public class PlayerController {
     @DeleteMapping
     public String deletePlayer(@RequestParam String name) {
         if (name == null || name.isEmpty()) {
-           throw new IllegalArgumentException("Name cannot be null or empty");
+            throw new IllegalArgumentException("Name cannot be null or empty");
         }
 
         playerService.deletePlayer(name);
@@ -61,7 +61,7 @@ public class PlayerController {
     }
 
     @DeleteMapping("/reset")
-    public String resetPlayers (){
+    public String resetPlayers() {
         playerService.deleteAllPlayers();
         return "All players were deleted successfully";
     }
@@ -75,8 +75,27 @@ public class PlayerController {
         if (targetPlayer == null) {
             throw new IllegalArgumentException("Player not found");
         }
-        targetPlayer.setSkillLevel(skillLevel);
         playerService.updateSkillLevel(targetPlayer, skillLevel);
         return "Skill level of " + name + " was updated successfully to " + skillLevel + ".";
+    }
+
+    @PostMapping("/updatePartner")
+    public String updateHasToBeWith(@RequestParam String name, @RequestParam String partnerName) {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Name cannot be null or empty");
+        }
+        playerService.updateHasToBeWith(name, partnerName);
+
+        return "Player " + name + " was updated successfully.";
+    }
+
+    @PostMapping("/updateRival")
+    public String updateCannotBeWith(@RequestParam String name, @RequestParam String rivalName) {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Name cannot be null or empty");
+        }
+        playerService.updateCannotBeWith(name, rivalName);
+
+        return "Player " + name + " was updated successfully.";
     }
 }
