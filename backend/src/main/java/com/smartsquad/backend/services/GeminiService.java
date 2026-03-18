@@ -95,6 +95,8 @@ public class GeminiService {
         String url = BASE_URL + MODEL_NAME + ":generateContent?key=" + apiKey;
 
         // Structured payload for Gemini API
+        // temperature for how much randomness in the output (low for more accurate and not creative)
+        // maxOutputTokens for how many tokens to generate (higher for more longer responses)
         Map<String, Object> payload = Map.of(
                 "contents", List.of(
                         Map.of("parts", List.of(
@@ -103,7 +105,7 @@ public class GeminiService {
                 ),
                 "generationConfig", Map.of(
                         "temperature", 0.1,
-                        "maxOutputTokens", 75
+                        "maxOutputTokens", 200
                 )
         );
 
