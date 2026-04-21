@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Check, Loader, Users } from 'lucide-react'
+import { X, Check, Loader, Users, Plus, Trash2, Link, Unlink } from 'lucide-react'
 import { getAllPlayers, smartBalance } from '../services/api'
 
 function PlayerPickerModal({ numTeams, onClose, onResult }) {
@@ -8,6 +8,10 @@ function PlayerPickerModal({ numTeams, onClose, onResult }) {
   const [loading, setLoading] = useState(true)
   const [balancing, setBalancing] = useState(false)
   const [error, setError] = useState('')
+  const [constraints, setConstraints] = useState([])
+  const [cPlayerA, setCPlayerA] = useState('')
+  const [cPlayerB, setCPlayerB] = useState('')
+  const [cType, setCType] = useState('must_be_with')
 
   useEffect(() => {
     getAllPlayers()
@@ -41,6 +45,27 @@ function PlayerPickerModal({ numTeams, onClose, onResult }) {
     }
   }
 
+  const addConstraint = () => {
+    if (!cPlayerA || !cPlayerB || cPlayerA === cPlayerB) return
+    const exists = constraints.some(
+      (c) =>
+        c.type === cType &&
+        ((c.playerA === cPlayerA && c.playerB === cPlayerB) ||
+          (c.playerA === cPlayerB && c.playerB === cPlayerA))
+    )
+    if (exists) return
+    setConstraints((prev) => [
+      ...prev,
+      { type: cType, playerA: cPlayerA, playerB: cPlayerB },
+    ])
+    setCPlayerA('')
+    setCPlayerB('')
+  }
+
+  const removeConstraint = (index) => {
+    setConstraints((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const handleBalance = async () => {
     if (selected.size < numTeams * 2) {
       setError(`Need at least ${numTeams * 2} players for ${numTeams} teams`)
@@ -52,7 +77,7 @@ function PlayerPickerModal({ numTeams, onClose, onResult }) {
 
     try {
       const names = Array.from(selected)
-      const result = await smartBalance(names, numTeams)
+      const result = await smartBalance(names, numTeams, [], constraints)
       onResult(result, names)
       onClose()
     } catch (err) {
@@ -132,6 +157,93 @@ function PlayerPickerModal({ numTeams, onClose, onResult }) {
               })}
             </div>
           </>
+        )}
+
+        {selected.size >= 2 && (
+          <div className="border-t pt-3 mt-1">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+              <Link size={14} /> Game-Day Constraints
+            </h3>
+
+            <div className="flex gap-1 items-end mb-2">
+              <select
+                value={cPlayerA}
+                onChange={(e) => setCPlayerA(e.target.value)}
+                className="flex-1 px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+              >
+                <option value="">Player A</option>
+                {Array.from(selected).map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={cType}
+                onChange={(e) => setCType(e.target.value)}
+                className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+              >
+                <option value="must_be_with">must be with</option>
+                <option value="cannot_be_with">cannot be with</option>
+              </select>
+
+              <select
+                value={cPlayerB}
+                onChange={(e) => setCPlayerB(e.target.value)}
+                className="flex-1 px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+              >
+                <option value="">Player B</option>
+                {Array.from(selected)
+                  .filter((n) => n !== cPlayerA)
+                  .map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+              </select>
+
+              <button
+                onClick={addConstraint}
+                disabled={!cPlayerA || !cPlayerB}
+                className="p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-500 disabled:opacity-30 cursor-pointer flex-shrink-0"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+
+            {constraints.length > 0 && (
+              <div className="flex flex-col gap-1 max-h-24 overflow-y-auto">
+                {constraints.map((c, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center justify-between text-xs px-2 py-1.5 rounded-md ${
+                      c.type === 'must_be_with'
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'bg-red-50 text-red-700'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1">
+                      {c.type === 'must_be_with' ? (
+                        <Link size={12} />
+                      ) : (
+                        <Unlink size={12} />
+                      )}
+                      <strong>{c.playerA}</strong>
+                      {c.type === 'must_be_with' ? ' with ' : ' not with '}
+                      <strong>{c.playerB}</strong>
+                    </span>
+                    <button
+                      onClick={() => removeConstraint(i)}
+                      className="text-gray-400 hover:text-red-500 cursor-pointer"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {error && <p className="text-red-500 text-sm mb-3">{error}</p>}

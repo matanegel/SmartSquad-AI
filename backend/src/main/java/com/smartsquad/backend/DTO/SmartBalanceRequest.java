@@ -16,4 +16,5 @@ public class SmartBalanceRequest {
     private List<String> playerNames;
     private int numTeams = 3;
     private List<Map<String, String>> excludedConstraints = new ArrayList<>();
+    private List<Map<String, String>> additionalConstraints = new ArrayList<>();
 }

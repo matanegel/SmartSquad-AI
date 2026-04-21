@@ -43,6 +43,16 @@ public class BalanceController {
         List<PlayerEntity> players = balancingService.findAllByNameIn(request.getPlayerNames());
         List<Map<String, String>> constraints = buildConstraints(players, request.getExcludedConstraints());
 
+        if (request.getAdditionalConstraints() != null) {
+            for (Map<String, String> ac : request.getAdditionalConstraints()) {
+                constraints.add(Map.of(
+                        "type", ac.get("type"),
+                        "playerA", ac.get("playerA").toLowerCase(),
+                        "playerB", ac.get("playerB").toLowerCase()
+                ));
+            }
+        }
+
         return pythonBalancingService.balance(players, request.getNumTeams(), constraints);
     }
 

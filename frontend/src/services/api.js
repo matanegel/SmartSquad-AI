@@ -44,7 +44,7 @@ export async function balanceTeams(playerNames, numTeams = 3) {
   return response.json()
 }
 
-export async function smartBalance(playerNames, numTeams = 3, excludedConstraints = []) {
+export async function smartBalance(playerNames, numTeams = 3, excludedConstraints = [], additionalConstraints = []) {
   const response = await fetch(`${API_BASE}/balance/smart`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -52,6 +52,7 @@ export async function smartBalance(playerNames, numTeams = 3, excludedConstraint
       playerNames,
       numTeams,
       excludedConstraints,
+      additionalConstraints,
     }),
   })
   if (!response.ok) {
