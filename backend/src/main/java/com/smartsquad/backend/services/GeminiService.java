@@ -33,10 +33,18 @@ public class GeminiService {
     public String classifyIntent(String userMessage) {
         String prompt = "You are a router for a football squad management app. " +
                 "Classify the user's message into exactly ONE of these intents:\n" +
-                "- create_player  (user wants to add/create a new player)\n" +
-                "- balance_teams  (user wants to shuffle/balance/split players into teams)\n" +
-                "- list_players   (user wants to see all players or who is in the database)\n" +
-                "- general_chat   (user is asking a question, greeting, asking for help, or having a conversation)\n\n" +
+                "- create_player  (user provides a specific player name and wants to ADD them. " +
+                "Example: 'Create Messi with skill 5', 'Add Ronaldo')\n" +
+                "- balance_teams  (user provides specific player names and wants to SHUFFLE/BALANCE them. " +
+                "Example: 'Balance Messi and Ronaldo', 'Shuffle all players')\n" +
+                "- list_players   (user wants to SEE all players in the database. " +
+                "Example: 'Show all players', 'Who is registered?')\n" +
+                "- general_chat   (user is asking a QUESTION, greeting, asking HOW to do something, " +
+                "asking for help, or having a conversation. " +
+                "Example: 'How to create a player?', 'What can you do?', 'Help', 'Hello')\n\n" +
+                "IMPORTANT: If the user is ASKING HOW to do something (question), classify as general_chat. " +
+                "Only classify as create_player or balance_teams if the user provides actual player names " +
+                "and wants to perform the action NOW.\n\n" +
                 "Return ONLY the intent keyword, nothing else.\n\n" +
                 "User message: " + userMessage;
 
