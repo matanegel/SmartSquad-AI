@@ -47,11 +47,8 @@ public class GeminiController {
                 case "balance_teams" -> handleBalanceTeams(request.getMessage(), request.getNumTeams());
                 case "list_players" -> handleListPlayers();
                 default -> ChatResponse.of(
-                        "I'm not sure what you want. Try something like:\n" +
-                        "• \"Create Messi with skill 5\"\n" +
-                        "• \"Balance Messi, Ronaldo, Neymar into teams\"\n" +
-                        "• \"Show all players\"",
-                        "unknown", null);
+                        geminiService.chat(request.getMessage()),
+                        "general_chat", null);
             };
         } catch (Exception e) {
             return ChatResponse.error("Something went wrong: " + e.getMessage());

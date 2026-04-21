@@ -36,16 +36,33 @@ public class GeminiService {
                 "- create_player  (user wants to add/create a new player)\n" +
                 "- balance_teams  (user wants to shuffle/balance/split players into teams)\n" +
                 "- list_players   (user wants to see all players or who is in the database)\n" +
-                "- unknown        (anything else)\n\n" +
+                "- general_chat   (user is asking a question, greeting, asking for help, or having a conversation)\n\n" +
                 "Return ONLY the intent keyword, nothing else.\n\n" +
                 "User message: " + userMessage;
 
         String result = callGeminiWithRetry(prompt).trim().toLowerCase();
 
-        if (List.of("create_player", "balance_teams", "list_players").contains(result)) {
+        if (List.of("create_player", "balance_teams", "list_players", "general_chat").contains(result)) {
             return result;
         }
-        return "unknown";
+        return "general_chat";
+    }
+
+    public String chat(String userMessage) {
+        String prompt = "You are a friendly AI assistant for SmartSquad AI — a football squad management app. " +
+                "Your capabilities:\n" +
+                "1. CREATE PLAYER — user can say things like 'Create Messi with skill 5' or " +
+                "'Add Ronaldo, he's a pro and must be with Benzema' and you'll create the player in the database.\n" +
+                "2. BALANCE TEAMS — user can say 'Balance all players into 3 teams' or " +
+                "'Shuffle Messi, Ronaldo, Neymar' and you'll split them into fair teams shown on the field.\n" +
+                "3. LIST PLAYERS — user can say 'Show all players' or 'Who is in the database?' to see everyone.\n\n" +
+                "Skill levels go from 1 (beginner) to 5 (pro). Players can have a partner (must be on same team) " +
+                "or a rival (must be on different teams).\n\n" +
+                "Answer the user's question naturally and helpfully. Keep it short (2-3 sentences max). " +
+                "If they seem confused, give examples of what they can type.\n\n" +
+                "User: " + userMessage;
+
+        return callGeminiWithRetry(prompt);
     }
 
     public List<PlayerEntity> getPlayersFromPrompt(String userPrompt) {
