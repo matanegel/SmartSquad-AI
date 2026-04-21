@@ -168,7 +168,7 @@ function Field({ teams = [], conflict = null, isFallback = false, appliedConstra
                 Team {teamIndex + 1}
               </span>
 
-              {team.players.map((player, playerIndex) => (
+              {[...team.players].sort((a, b) => b.skillLevel - a.skillLevel).map((player, playerIndex) => (
                 <PlayerBadge
                   key={player.id || `${teamIndex}-${playerIndex}`}
                   name={player.name}
