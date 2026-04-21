@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { X, Check, Loader, Users } from 'lucide-react'
-import { getAllPlayers, balanceTeams } from '../services/api'
+import { getAllPlayers, smartBalance } from '../services/api'
 
-function PlayerPickerModal({ numTeams, onClose, onTeamsReady }) {
+function PlayerPickerModal({ numTeams, onClose, onResult }) {
   const [players, setPlayers] = useState([])
   const [selected, setSelected] = useState(new Set())
   const [loading, setLoading] = useState(true)
@@ -52,8 +52,8 @@ function PlayerPickerModal({ numTeams, onClose, onTeamsReady }) {
 
     try {
       const names = Array.from(selected)
-      const result = await balanceTeams(names, numTeams)
-      onTeamsReady(result)
+      const result = await smartBalance(names, numTeams)
+      onResult(result, names)
       onClose()
     } catch (err) {
       setError(err.message)

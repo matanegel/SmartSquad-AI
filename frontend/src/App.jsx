@@ -4,6 +4,7 @@ import Field from './components/Field'
 import CreatePlayerModal from './components/CreatePlayerModal'
 import PlayerPickerModal from './components/PlayerPickerModal'
 import ManagePlayersModal from './components/ManagePlayersModal'
+import { smartBalance } from './services/api'
 
 function App() {
   const [teams, setTeams] = useState([])
@@ -11,12 +12,63 @@ function App() {
   const [showPickerModal, setShowPickerModal] = useState(false)
   const [showManageModal, setShowManageModal] = useState(false)
   const [numTeams, setNumTeams] = useState(3)
+  const [conflict, setConflict] = useState(null)
+  const [isFallback, setIsFallback] = useState(false)
+  const [lastPickedNames, setLastPickedNames] = useState([])
+  const [excludedConstraints, setExcludedConstraints] = useState([])
+  const [rerunning, setRerunning] = useState(false)
 
   const handleSquadClick = () => {
-    if (teams.length > 0) {
+    if (teams.length > 0 || conflict) {
       setTeams([])
+      setConflict(null)
+      setIsFallback(false)
+      setExcludedConstraints([])
     } else {
       setShowPickerModal(true)
+    }
+  }
+
+  const handleSmartResult = (result, playerNames) => {
+    setLastPickedNames(playerNames)
+
+    if (result.status === 'success') {
+      setTeams(result.teams)
+      setConflict(null)
+      setIsFallback(result.fallback || false)
+    } else {
+      setTeams([])
+      setConflict({
+        reason: result.reason,
+        message: result.message,
+        conflictingPlayers: result.conflictingPlayers || [],
+      })
+    }
+  }
+
+  const handleCancelConstraintAndRerun = async () => {
+    if (!conflict || conflict.conflictingPlayers.length < 2) return
+
+    setRerunning(true)
+    const [a, b] = conflict.conflictingPlayers
+    const newExcluded = [
+      ...excludedConstraints,
+      { playerA: a, playerB: b, type: 'cannot_be_with' },
+      { playerA: a, playerB: b, type: 'must_be_with' },
+    ]
+    setExcludedConstraints(newExcluded)
+
+    try {
+      const result = await smartBalance(lastPickedNames, numTeams, newExcluded)
+      handleSmartResult(result, lastPickedNames)
+    } catch (err) {
+      setConflict({
+        reason: 'network_error',
+        message: err.message,
+        conflictingPlayers: [],
+      })
+    } finally {
+      setRerunning(false)
     }
   }
 
@@ -61,7 +113,7 @@ function App() {
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-500 transition-colors cursor-pointer"
             >
               <Shuffle size={20} />
-              {teams.length > 0 ? 'Clear' : 'Squad'}
+              {teams.length > 0 || conflict ? 'Clear' : 'Squad'}
             </button>
           </div>
         </div>
@@ -69,7 +121,13 @@ function App() {
 
       {/* ===== RIGHT PANEL (3/4) — Soccer Field ===== */}
       <div className="w-3/4">
-        <Field teams={teams} />
+        <Field
+          teams={teams}
+          conflict={conflict}
+          isFallback={isFallback}
+          onCancelConstraint={handleCancelConstraintAndRerun}
+          rerunning={rerunning}
+        />
       </div>
 
       {showCreateModal && (
@@ -85,7 +143,7 @@ function App() {
         <PlayerPickerModal
           numTeams={numTeams}
           onClose={() => setShowPickerModal(false)}
-          onTeamsReady={(result) => setTeams(result)}
+          onResult={handleSmartResult}
         />
       )}
 

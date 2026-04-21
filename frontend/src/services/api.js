@@ -29,13 +29,30 @@ export async function deletePlayer(name) {
   return response.text()
 }
 
-// ─── Balance endpoint ────────────────────────────────────
+// ─── Balance endpoints ───────────────────────────────────
 
 export async function balanceTeams(playerNames, numTeams = 3) {
   const response = await fetch(`${API_BASE}/balance?numTeams=${numTeams}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(playerNames),
+  })
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || 'Failed to balance teams')
+  }
+  return response.json()
+}
+
+export async function smartBalance(playerNames, numTeams = 3, excludedConstraints = []) {
+  const response = await fetch(`${API_BASE}/balance/smart`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      playerNames,
+      numTeams,
+      excludedConstraints,
+    }),
   })
   if (!response.ok) {
     const errorText = await response.text()
