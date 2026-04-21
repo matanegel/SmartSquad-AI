@@ -6,6 +6,8 @@ function CreatePlayerModal({ onClose, onPlayerCreated }) {
   const [name, setName] = useState('')
   const [skillLevel, setSkillLevel] = useState(3)
   const [secondarySkill, setSecondarySkill] = useState(2)
+  const [hasToBeWith, setHasToBeWith] = useState('')
+  const [cannotBeWith, setCannotBeWith] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -15,11 +17,15 @@ function CreatePlayerModal({ onClose, onPlayerCreated }) {
     setLoading(true)
 
     try {
-      const result = await createPlayer({
+      const playerData = {
         name,
         skillLevel,
         secondarySkill,
-      })
+      }
+      if (hasToBeWith.trim()) playerData.hasToBeWith = hasToBeWith.trim()
+      if (cannotBeWith.trim()) playerData.cannotBeWith = cannotBeWith.trim()
+
+      const result = await createPlayer(playerData)
       onPlayerCreated(result)
       onClose()
     } catch (err) {
@@ -90,6 +96,34 @@ function CreatePlayerModal({ onClose, onPlayerCreated }) {
               <span>Beginner</span>
               <span>Pro</span>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Must be with (optional)
+            </label>
+            <input
+              type="text"
+              value={hasToBeWith}
+              onChange={(e) => setHasToBeWith(e.target.value)}
+              placeholder="e.g. yossi"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">Partner — always on the same team</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Cannot be with (optional)
+            </label>
+            <input
+              type="text"
+              value={cannotBeWith}
+              onChange={(e) => setCannotBeWith(e.target.value)}
+              placeholder="e.g. dan"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">Rival — always on different teams</p>
           </div>
 
           {error && (

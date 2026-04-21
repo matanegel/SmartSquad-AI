@@ -1,39 +1,22 @@
 import { useState } from 'react'
-import { UserPlus, Shuffle, Loader } from 'lucide-react'
+import { UserPlus, Shuffle, Settings } from 'lucide-react'
 import Field from './components/Field'
 import CreatePlayerModal from './components/CreatePlayerModal'
-import { getAllPlayers, balanceTeams } from './services/api'
+import PlayerPickerModal from './components/PlayerPickerModal'
+import ManagePlayersModal from './components/ManagePlayersModal'
 
 function App() {
   const [teams, setTeams] = useState([])
-  const [showModal, setShowModal] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showPickerModal, setShowPickerModal] = useState(false)
+  const [showManageModal, setShowManageModal] = useState(false)
   const [numTeams, setNumTeams] = useState(3)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
 
-  const handleShuffle = async () => {
+  const handleSquadClick = () => {
     if (teams.length > 0) {
       setTeams([])
-      setError('')
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
-    try {
-      const players = await getAllPlayers()
-      if (players.length === 0) {
-        setError('No players yet! Add some players first.')
-        return
-      }
-      const names = players.map((p) => p.name)
-      const result = await balanceTeams(names, numTeams)
-      setTeams(result)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+    } else {
+      setShowPickerModal(true)
     }
   }
 
@@ -49,42 +32,39 @@ function App() {
         </p>
         <div className="flex flex-col gap-3 w-full max-w-48">
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => setShowCreateModal(true)}
             className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors cursor-pointer"
           >
             <UserPlus size={20} />
             Create Player
+          </button>
+          <button
+            onClick={() => setShowManageModal(true)}
+            className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors cursor-pointer"
+          >
+            <Settings size={20} />
+            Manage Players
           </button>
 
           <div className="flex items-center gap-2">
             <select
               value={numTeams}
               onChange={(e) => setNumTeams(Number(e.target.value))}
-              disabled={loading}
-              className="px-2 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 cursor-pointer disabled:opacity-50"
+              className="px-2 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 cursor-pointer"
             >
               <option value={2}>2</option>
               <option value={3}>3</option>
               <option value={4}>4</option>
             </select>
             <button
-              onClick={handleShuffle}
-              disabled={loading}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-500 transition-colors cursor-pointer disabled:opacity-50"
+              onClick={handleSquadClick}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-500 transition-colors cursor-pointer"
             >
-              {loading ? (
-                <Loader size={20} className="animate-spin" />
-              ) : (
-                <Shuffle size={20} />
-              )}
-              {loading ? 'Loading...' : teams.length > 0 ? 'Clear' : 'Squad'}
+              <Shuffle size={20} />
+              {teams.length > 0 ? 'Clear' : 'Squad'}
             </button>
           </div>
         </div>
-
-        {error && (
-          <p className="text-red-500 text-xs text-center max-w-48">{error}</p>
-        )}
       </div>
 
       {/* ===== RIGHT PANEL (3/4) — Soccer Field ===== */}
@@ -92,14 +72,25 @@ function App() {
         <Field teams={teams} />
       </div>
 
-      {/* ===== MODAL — Create Player Form ===== */}
-      {showModal && (
+      {showCreateModal && (
         <CreatePlayerModal
-          onClose={() => setShowModal(false)}
+          onClose={() => setShowCreateModal(false)}
           onPlayerCreated={(result) => {
             console.log('Player created:', result)
           }}
         />
+      )}
+
+      {showPickerModal && (
+        <PlayerPickerModal
+          numTeams={numTeams}
+          onClose={() => setShowPickerModal(false)}
+          onTeamsReady={(result) => setTeams(result)}
+        />
+      )}
+
+      {showManageModal && (
+        <ManagePlayersModal onClose={() => setShowManageModal(false)} />
       )}
     </div>
   )
