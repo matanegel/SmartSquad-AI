@@ -1,9 +1,98 @@
-import { AlertTriangle, Loader, Info } from 'lucide-react'
+import { useState } from 'react'
+import { AlertTriangle, Loader, Info, Link, Unlink, Trash2 } from 'lucide-react'
 import PlayerBadge from './PlayerBadge'
 
 const TEAM_COLORS = ['#3b82f6', '#ef4444', '#eab308', '#a855f7', '#f97316', '#06b6d4']
 
-function Field({ teams = [], conflict = null, isFallback = false, onCancelConstraint, rerunning = false }) {
+function ConflictOverlay({ conflict, appliedConstraints, onRerunWithExclusions, rerunning }) {
+  const [markedForRemoval, setMarkedForRemoval] = useState(new Set())
+
+  const toggleConstraint = (index) => {
+    setMarkedForRemoval((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) {
+        next.delete(index)
+      } else {
+        next.add(index)
+      }
+      return next
+    })
+  }
+
+  const handleRerun = () => {
+    const toExclude = appliedConstraints
+      .filter((_, i) => markedForRemoval.has(i))
+      .map((c) => ({ playerA: c.playerA, playerB: c.playerB, type: c.type }))
+    onRerunWithExclusions(toExclude)
+  }
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center p-8">
+      <div className="bg-red-900/90 rounded-xl p-6 max-w-lg w-full shadow-2xl">
+        <AlertTriangle size={36} className="text-red-400 mx-auto mb-3" />
+        <h3 className="text-white font-bold text-lg mb-1 text-center">Constraint Conflict</h3>
+        <p className="text-red-200 text-sm mb-4 text-center">{conflict.message}</p>
+
+        {appliedConstraints.length > 0 && (
+          <>
+            <p className="text-red-300 text-xs font-semibold mb-2 uppercase tracking-wide">
+              Select constraints to remove, then re-run:
+            </p>
+            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto mb-4 pr-1">
+              {appliedConstraints.map((c, i) => {
+                const isMarked = markedForRemoval.has(i)
+                const isMust = c.type === 'must_be_with'
+                return (
+                  <button
+                    key={i}
+                    onClick={() => toggleConstraint(i)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-all cursor-pointer ${
+                      isMarked
+                        ? 'bg-red-500/40 line-through opacity-70'
+                        : isMust
+                          ? 'bg-blue-500/20 text-blue-200'
+                          : 'bg-red-500/20 text-red-200'
+                    }`}
+                  >
+                    {isMarked ? (
+                      <Trash2 size={14} className="text-red-400 flex-shrink-0" />
+                    ) : isMust ? (
+                      <Link size={14} className="flex-shrink-0" />
+                    ) : (
+                      <Unlink size={14} className="flex-shrink-0" />
+                    )}
+                    <span className="flex-1">
+                      <strong>{c.playerA}</strong>
+                      {isMust ? ' must be with ' : ' cannot be with '}
+                      <strong>{c.playerB}</strong>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        <button
+          onClick={handleRerun}
+          disabled={rerunning || markedForRemoval.size === 0}
+          className="w-full px-4 py-2.5 bg-white text-red-900 rounded-lg font-medium hover:bg-red-100 transition-colors disabled:opacity-40 cursor-pointer"
+        >
+          {rerunning ? (
+            <span className="flex items-center gap-2 justify-center">
+              <Loader size={16} className="animate-spin" />
+              Re-running...
+            </span>
+          ) : (
+            `Remove ${markedForRemoval.size} constraint${markedForRemoval.size !== 1 ? 's' : ''} & Re-run`
+          )}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function Field({ teams = [], conflict = null, isFallback = false, appliedConstraints = [], onRerunWithExclusions, rerunning = false }) {
   const hasTeams = teams.length > 0
 
   return (
@@ -40,34 +129,12 @@ function Field({ teams = [], conflict = null, isFallback = false, onCancelConstr
 
       {/* ===== CONFLICT ERROR OVERLAY ===== */}
       {conflict ? (
-        <div className="absolute inset-0 flex items-center justify-center p-8">
-          <div className="bg-red-900/90 rounded-xl p-6 max-w-md text-center shadow-2xl">
-            <AlertTriangle size={40} className="text-red-400 mx-auto mb-3" />
-            <h3 className="text-white font-bold text-lg mb-2">Constraint Conflict</h3>
-            <p className="text-red-200 text-sm mb-3">{conflict.message}</p>
-            {conflict.conflictingPlayers.length > 0 && (
-              <p className="text-red-300 text-xs mb-4">
-                Players involved: <strong>{conflict.conflictingPlayers.join(', ')}</strong>
-              </p>
-            )}
-            {conflict.conflictingPlayers.length >= 2 && (
-              <button
-                onClick={onCancelConstraint}
-                disabled={rerunning}
-                className="px-4 py-2 bg-white text-red-900 rounded-lg font-medium hover:bg-red-100 transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                {rerunning ? (
-                  <span className="flex items-center gap-2 justify-center">
-                    <Loader size={16} className="animate-spin" />
-                    Re-running...
-                  </span>
-                ) : (
-                  `Cancel constraint & Re-run`
-                )}
-              </button>
-            )}
-          </div>
-        </div>
+        <ConflictOverlay
+          conflict={conflict}
+          appliedConstraints={appliedConstraints}
+          onRerunWithExclusions={onRerunWithExclusions}
+          rerunning={rerunning}
+        />
       ) : hasTeams ? (
         <div className="absolute inset-0 flex">
           {/* Fallback notice */}

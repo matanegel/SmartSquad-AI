@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -18,21 +19,26 @@ public class SmartBalanceResponse {
     private String message;
     private List<String> conflictingPlayers;
     private boolean fallback;
+    private List<Map<String, String>> appliedConstraints;
 
-    public static SmartBalanceResponse success(List<BalancingService.Team> teams, boolean fallback) {
+    public static SmartBalanceResponse success(List<BalancingService.Team> teams, boolean fallback,
+                                                List<Map<String, String>> appliedConstraints) {
         SmartBalanceResponse r = new SmartBalanceResponse();
         r.setStatus("success");
         r.setTeams(teams);
         r.setFallback(fallback);
+        r.setAppliedConstraints(appliedConstraints);
         return r;
     }
 
-    public static SmartBalanceResponse conflict(String reason, String message, List<String> conflictingPlayers) {
+    public static SmartBalanceResponse conflict(String reason, String message, List<String> conflictingPlayers,
+                                                 List<Map<String, String>> appliedConstraints) {
         SmartBalanceResponse r = new SmartBalanceResponse();
         r.setStatus("error");
         r.setReason(reason);
         r.setMessage(message);
         r.setConflictingPlayers(conflictingPlayers);
+        r.setAppliedConstraints(appliedConstraints);
         return r;
     }
 }

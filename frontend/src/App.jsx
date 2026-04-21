@@ -15,6 +15,8 @@ function App() {
   const [conflict, setConflict] = useState(null)
   const [isFallback, setIsFallback] = useState(false)
   const [lastPickedNames, setLastPickedNames] = useState([])
+  const [lastAdditionalConstraints, setLastAdditionalConstraints] = useState([])
+  const [appliedConstraints, setAppliedConstraints] = useState([])
   const [excludedConstraints, setExcludedConstraints] = useState([])
   const [rerunning, setRerunning] = useState(false)
 
@@ -24,13 +26,17 @@ function App() {
       setConflict(null)
       setIsFallback(false)
       setExcludedConstraints([])
+      setAppliedConstraints([])
+      setLastAdditionalConstraints([])
     } else {
       setShowPickerModal(true)
     }
   }
 
-  const handleSmartResult = (result, playerNames) => {
+  const handleSmartResult = (result, playerNames, additionalConstraints = []) => {
     setLastPickedNames(playerNames)
+    setLastAdditionalConstraints(additionalConstraints)
+    setAppliedConstraints(result.appliedConstraints || [])
 
     if (result.status === 'success') {
       setTeams(result.teams)
@@ -46,21 +52,19 @@ function App() {
     }
   }
 
-  const handleCancelConstraintAndRerun = async () => {
-    if (!conflict || conflict.conflictingPlayers.length < 2) return
-
+  const handleRerunWithExclusions = async (constraintsToExclude) => {
     setRerunning(true)
-    const [a, b] = conflict.conflictingPlayers
-    const newExcluded = [
-      ...excludedConstraints,
-      { playerA: a, playerB: b, type: 'cannot_be_with' },
-      { playerA: a, playerB: b, type: 'must_be_with' },
-    ]
+    const newExcluded = [...excludedConstraints, ...constraintsToExclude]
     setExcludedConstraints(newExcluded)
 
     try {
-      const result = await smartBalance(lastPickedNames, numTeams, newExcluded)
-      handleSmartResult(result, lastPickedNames)
+      const result = await smartBalance(
+        lastPickedNames,
+        numTeams,
+        newExcluded,
+        lastAdditionalConstraints
+      )
+      handleSmartResult(result, lastPickedNames, lastAdditionalConstraints)
     } catch (err) {
       setConflict({
         reason: 'network_error',
@@ -125,7 +129,8 @@ function App() {
           teams={teams}
           conflict={conflict}
           isFallback={isFallback}
-          onCancelConstraint={handleCancelConstraintAndRerun}
+          appliedConstraints={appliedConstraints}
+          onRerunWithExclusions={handleRerunWithExclusions}
           rerunning={rerunning}
         />
       </div>

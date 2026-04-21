@@ -41,15 +41,23 @@ public class BalanceController {
         }
 
         List<PlayerEntity> players = balancingService.findAllByNameIn(request.getPlayerNames());
-        List<Map<String, String>> constraints = buildConstraints(players, request.getExcludedConstraints());
+
+        Set<String> excludeKeys = request.getExcludedConstraints().stream()
+                .map(e -> constraintKey(e.get("playerA"), e.get("playerB"), e.get("type")))
+                .collect(Collectors.toSet());
+
+        List<Map<String, String>> constraints = buildConstraints(players, excludeKeys);
 
         if (request.getAdditionalConstraints() != null) {
             for (Map<String, String> ac : request.getAdditionalConstraints()) {
-                constraints.add(Map.of(
-                        "type", ac.get("type"),
-                        "playerA", ac.get("playerA").toLowerCase(),
-                        "playerB", ac.get("playerB").toLowerCase()
-                ));
+                String key = constraintKey(ac.get("playerA"), ac.get("playerB"), ac.get("type"));
+                if (!excludeKeys.contains(key)) {
+                    constraints.add(Map.of(
+                            "type", ac.get("type"),
+                            "playerA", ac.get("playerA").toLowerCase(),
+                            "playerB", ac.get("playerB").toLowerCase()
+                    ));
+                }
             }
         }
 
@@ -57,11 +65,7 @@ public class BalanceController {
     }
 
     private List<Map<String, String>> buildConstraints(List<PlayerEntity> players,
-                                                        List<Map<String, String>> excluded) {
-        Set<String> excludeKeys = excluded.stream()
-                .map(e -> constraintKey(e.get("playerA"), e.get("playerB"), e.get("type")))
-                .collect(Collectors.toSet());
-
+                                                        Set<String> excludeKeys) {
         List<Map<String, String>> constraints = new ArrayList<>();
 
         for (PlayerEntity p : players) {

@@ -36,18 +36,18 @@ public class PythonBalancingService {
             if ("success".equals(status)) {
                 List<Map<String, Object>> rawTeams = (List<Map<String, Object>>) parsed.get("teams");
                 List<BalancingService.Team> teams = convertToTeams(rawTeams);
-                return SmartBalanceResponse.success(teams, false);
+                return SmartBalanceResponse.success(teams, false, constraints);
             } else {
                 String reason = (String) parsed.getOrDefault("reason", "unknown");
                 String message = (String) parsed.getOrDefault("message", "Unknown error from solver");
                 List<String> conflicting = parsed.containsKey("conflicting_players")
                         ? (List<String>) parsed.get("conflicting_players")
                         : List.of();
-                return SmartBalanceResponse.conflict(reason, message, conflicting);
+                return SmartBalanceResponse.conflict(reason, message, conflicting, constraints);
             }
         } catch (Exception e) {
             log.warn("Python balancer failed, falling back to Java greedy: {}", e.getMessage());
-            return fallback(players, numTeams);
+            return fallback(players, numTeams, constraints);
         }
     }
 
@@ -133,12 +133,13 @@ public class PythonBalancingService {
         return teams;
     }
 
-    private SmartBalanceResponse fallback(List<PlayerEntity> players, int numTeams) {
+    private SmartBalanceResponse fallback(List<PlayerEntity> players, int numTeams,
+                                            List<Map<String, String>> constraints) {
         try {
             List<BalancingService.Team> teams = balancingService.balanceTeams(players, numTeams);
-            return SmartBalanceResponse.success(teams, true);
+            return SmartBalanceResponse.success(teams, true, constraints);
         } catch (Exception e) {
-            return SmartBalanceResponse.conflict("fallback_error", e.getMessage(), List.of());
+            return SmartBalanceResponse.conflict("fallback_error", e.getMessage(), List.of(), constraints);
         }
     }
 }

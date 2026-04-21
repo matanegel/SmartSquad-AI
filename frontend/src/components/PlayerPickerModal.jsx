@@ -78,7 +78,7 @@ function PlayerPickerModal({ numTeams, onClose, onResult }) {
     try {
       const names = Array.from(selected)
       const result = await smartBalance(names, numTeams, [], constraints)
-      onResult(result, names)
+      onResult(result, names, constraints)
       onClose()
     } catch (err) {
       setError(err.message)
