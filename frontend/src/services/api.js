@@ -44,6 +44,23 @@ export async function balanceTeams(playerNames, numTeams = 3) {
   return response.json()
 }
 
+// ─── AI Chat endpoint ─────────────────────────────────
+
+export async function sendChatMessage(message, numTeams = 3) {
+  const response = await fetch(`${API_BASE}/ai/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, numTeams }),
+  })
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || 'Chat request failed')
+  }
+  return response.json()
+}
+
+// ─── Smart Balance endpoint ───────────────────────────
+
 export async function smartBalance(playerNames, numTeams = 3, excludedConstraints = [], additionalConstraints = []) {
   const response = await fetch(`${API_BASE}/balance/smart`, {
     method: 'POST',

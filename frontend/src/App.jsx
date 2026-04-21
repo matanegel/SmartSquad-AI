@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { UserPlus, Shuffle, Settings } from 'lucide-react'
 import Field from './components/Field'
+import ChatPanel from './components/ChatPanel'
 import CreatePlayerModal from './components/CreatePlayerModal'
 import PlayerPickerModal from './components/PlayerPickerModal'
 import ManagePlayersModal from './components/ManagePlayersModal'
@@ -78,48 +79,63 @@ function App() {
 
   return (
     <div className="h-screen flex border-4 border-black bg-black">
-      {/* ===== LEFT PANEL (1/4) — Controls ===== */}
-      <div className="w-1/4 bg-white flex flex-col items-center justify-center gap-6 p-6">
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight text-center">
-          SmartSquad AI
-        </h1>
-        <p className="text-gray-500 text-sm text-center">
-          Build your squad. Balance the teams. Hit the pitch.
-        </p>
-        <div className="flex flex-col gap-3 w-full max-w-48">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors cursor-pointer"
-          >
-            <UserPlus size={20} />
-            Create Player
-          </button>
-          <button
-            onClick={() => setShowManageModal(true)}
-            className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors cursor-pointer"
-          >
-            <Settings size={20} />
-            Manage Players
-          </button>
-
-          <div className="flex items-center gap-2">
-            <select
-              value={numTeams}
-              onChange={(e) => setNumTeams(Number(e.target.value))}
-              className="px-2 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 cursor-pointer"
-            >
-              <option value={2}>2</option>
-              <option value={3}>3</option>
-              <option value={4}>4</option>
-            </select>
+      {/* ===== LEFT PANEL (1/4) — Controls top, Chat bottom ===== */}
+      <div className="w-1/4 bg-white flex flex-col">
+        {/* Top half — buttons */}
+        <div className="h-1/2 flex flex-col items-center justify-center gap-4 p-4 border-b border-gray-200">
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight text-center">
+            SmartSquad AI
+          </h1>
+          <p className="text-gray-500 text-xs text-center">
+            Build your squad. Balance the teams. Hit the pitch.
+          </p>
+          <div className="flex flex-col gap-2 w-full max-w-48">
             <button
-              onClick={handleSquadClick}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-500 transition-colors cursor-pointer"
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center justify-center gap-2 px-3 py-2.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors cursor-pointer text-sm"
             >
-              <Shuffle size={20} />
-              {teams.length > 0 || conflict ? 'Clear' : 'Squad'}
+              <UserPlus size={18} />
+              Create Player
             </button>
+            <button
+              onClick={() => setShowManageModal(true)}
+              className="flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors cursor-pointer text-sm"
+            >
+              <Settings size={18} />
+              Manage Players
+            </button>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={numTeams}
+                onChange={(e) => setNumTeams(Number(e.target.value))}
+                className="px-2 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 cursor-pointer"
+              >
+                <option value={2}>2</option>
+                <option value={3}>3</option>
+                <option value={4}>4</option>
+              </select>
+              <button
+                onClick={handleSquadClick}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-500 transition-colors cursor-pointer text-sm"
+              >
+                <Shuffle size={18} />
+                {teams.length > 0 || conflict ? 'Clear' : 'Squad'}
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Bottom half — AI Chat */}
+        <div className="h-1/2">
+          <ChatPanel
+            numTeams={numTeams}
+            onTeamsReceived={(teamsData) => {
+              setTeams(teamsData)
+              setConflict(null)
+              setIsFallback(false)
+            }}
+          />
         </div>
       </div>
 

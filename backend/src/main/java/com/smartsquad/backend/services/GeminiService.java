@@ -30,6 +30,24 @@ public class GeminiService {
 
 
 
+    public String classifyIntent(String userMessage) {
+        String prompt = "You are a router for a football squad management app. " +
+                "Classify the user's message into exactly ONE of these intents:\n" +
+                "- create_player  (user wants to add/create a new player)\n" +
+                "- balance_teams  (user wants to shuffle/balance/split players into teams)\n" +
+                "- list_players   (user wants to see all players or who is in the database)\n" +
+                "- unknown        (anything else)\n\n" +
+                "Return ONLY the intent keyword, nothing else.\n\n" +
+                "User message: " + userMessage;
+
+        String result = callGeminiWithRetry(prompt).trim().toLowerCase();
+
+        if (List.of("create_player", "balance_teams", "list_players").contains(result)) {
+            return result;
+        }
+        return "unknown";
+    }
+
     public List<PlayerEntity> getPlayersFromPrompt(String userPrompt) {
         String lowerPrompt = userPrompt.toLowerCase();
 
